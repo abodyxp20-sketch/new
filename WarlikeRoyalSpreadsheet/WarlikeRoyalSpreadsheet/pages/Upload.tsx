@@ -189,7 +189,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
             ) : (
               <div className="text-center p-6 md:p-12">
                 <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-500/10 dark:bg-emerald-500/20 squircle flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-xl text-emerald-600">
-                  <Camera size={32} md:size={40} />
+                  <Camera size={40} />
                 </div>
                 <p className="font-black text-xl md:text-2xl tracking-tight text-slate-700 dark:text-slate-200">
                   {language === 'ar' ? 'التقط الصورة الآن' : 'Capture Now'}
@@ -315,16 +315,16 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
             </div>
           </div>
 
-          <button 
-            type="submit" 
-            disabled={!image || isUploading} 
+          <button
+            type="submit"
+            disabled={!image || isUploading}
             className="w-full py-4 md:py-6 rounded-[20px] md:rounded-[25px] bg-emerald-600 text-white font-black text-xl md:text-2xl shadow-2xl disabled:opacity-50 active:scale-95 transition-all hover-lift flex items-center justify-center gap-3 md:gap-4"
           >
             {isUploading ? (
-              <Loader2 className="animate-spin" size={24} md:size={28} />
+              <Loader2 className="animate-spin" size={28} />
             ) : (
               <>
-                <Sparkles size={24} md:size={28} />
+                <Sparkles size={28} />
                 {editItem ? (language === 'ar' ? 'حفظ التغييرات' : 'Save Changes') : (language === 'ar' ? 'نشر في عطاء' : 'Publish to Ataa')}
               </>
             )}
@@ -350,6 +350,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
           )}
         </form>
       </div>
+    </div>
     </div>
   );
 };
