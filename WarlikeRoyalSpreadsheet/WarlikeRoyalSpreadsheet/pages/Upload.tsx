@@ -101,12 +101,15 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
 
       const donorId = user?.id || 'guest';
       const donorName = user?.displayName || (language === 'ar' ? 'ضيف عطاء' : 'Ataa Guest');
+      const donorEmail = user?.email || `${donorId}@guest.ataa`;
 
       const newItemData = {
         ...formData,
         imageUrl: finalImageUrl,
         donorId: donorId,
         donorName: donorName,
+        donorEmail: donorEmail,
+        donorPhoneNumber: user?.phoneNumber,
         isAvailable: true,
         status: status,
         createdAt: Date.now()
@@ -132,6 +135,8 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
           imageUrl: image,
           donorId: user?.id || 'guest',
           donorName: user?.displayName || (language === 'ar' ? 'ضيف عطاء' : 'Ataa Guest'),
+          donorEmail: user?.email || `${user?.id || 'guest'}@guest.ataa`,
+          donorPhoneNumber: user?.phoneNumber,
           isAvailable: true,
           status: 'approved',
           createdAt: Date.now()
@@ -172,10 +177,10 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
     <div className="max-w-4xl mx-auto py-4 md:py-12 px-2 md:px-6">
       <div className="glass squircle-lg p-6 md:p-12 border-white/40 shadow-2xl animate-fade-up">
         <div className="mb-6 md:mb-12">
-          <h1 className="text-3xl md:text-6xl font-black mb-2 md:mb-4 tracking-tighter flex items-center gap-3">
-            {editItem ? (language === 'ar' ? 'تعديل عطائك' : 'Refine Your Gift') : t.uploadTitle} <Sparkles className="text-emerald-500 animate-pulse" size={24} />
+          <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 tracking-tighter flex items-center gap-3">
+            {editItem ? (language === 'ar' ? 'تعديل عطائك' : 'Refine Your Gift') : t.uploadTitle} <Sparkles className="text-emerald-500 animate-pulse" size={20} md:size={24} />
           </h1>
-          <p className="text-slate-500 text-sm md:text-xl font-medium">{t.uploadDesc}</p>
+          <p className="text-slate-500 text-sm md:text-lg font-medium">{t.uploadDesc}</p>
         </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16">
@@ -187,14 +192,14 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
             {image ? (
               <img src={image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
             ) : (
-              <div className="text-center p-6 md:p-12">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-500/10 dark:bg-emerald-500/20 squircle flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-xl text-emerald-600">
-                  <Camera size={40} />
+              <div className="text-center p-4 md:p-8">
+                <div className="w-14 h-14 md:w-16 md:h-16 bg-emerald-500/10 dark:bg-emerald-500/20 squircle flex items-center justify-center mx-auto mb-3 md:mb-5 shadow-xl text-emerald-600">
+                  <Camera size={32} md:size={40} />
                 </div>
-                <p className="font-black text-xl md:text-2xl tracking-tight text-slate-700 dark:text-slate-200">
+                <p className="font-black text-lg md:text-xl tracking-tight text-slate-700 dark:text-slate-200">
                   {language === 'ar' ? 'التقط الصورة الآن' : 'Capture Now'}
                 </p>
-                <p className="text-[8px] md:text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">
+                <p className="text-[7px] md:text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2">
                   Instant Approval System
                 </p>
               </div>
@@ -239,7 +244,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
                 required 
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
-                className="w-full p-4 md:p-6 rounded-[18px] md:rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-black text-lg md:text-xl shadow-inner focus:ring-4 focus:ring-emerald-500/10 transition-all" 
+                className="w-full p-3 md:p-5 rounded-[18px] md:rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-black text-base md:text-lg shadow-inner focus:ring-4 focus:ring-emerald-500/10 transition-all" 
               />
             </div>
             
@@ -255,7 +260,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
                       value={formData.pickupLocation} 
                       onChange={e => setFormData({...formData, pickupLocation: e.target.value})} 
                       placeholder={language === 'ar' ? 'اسم المكان' : 'Location name'}
-                      className="w-full p-4 md:p-6 rounded-[18px] md:rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-bold text-base md:text-lg shadow-inner focus:ring-4 focus:ring-emerald-500/10 transition-all" 
+                      className="w-full p-3 md:p-5 rounded-[18px] md:rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-bold text-sm md:text-base shadow-inner focus:ring-4 focus:ring-emerald-500/10 transition-all" 
                     />
                     {formData.coordinates && (
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 animate-pulse">
@@ -293,7 +298,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
                 <select 
                   value={formData.condition} 
                   onChange={e => setFormData({...formData, condition: e.target.value as any})} 
-                  className="w-full p-6 rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-bold text-lg shadow-inner appearance-none cursor-pointer focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                  className="w-full p-5 rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-bold text-base shadow-inner appearance-none cursor-pointer focus:ring-4 focus:ring-emerald-500/10 transition-all"
                 >
                   <option>New</option>
                   <option>Like New</option>
@@ -310,7 +315,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
               <textarea 
                 value={formData.description} 
                 onChange={e => setFormData({...formData, description: e.target.value})} 
-                className="w-full p-6 rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-medium text-lg shadow-inner h-32 resize-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                className="w-full p-5 rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-medium text-base shadow-inner h-32 resize-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
               />
             </div>
           </div>

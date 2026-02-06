@@ -117,12 +117,12 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
             { label: t.co2Saved, value: co2Reduced, icon: Cloud, color: "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" },
             { label: t.moneySaved, value: `$${moneySaved}`, icon: Coins, color: "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" },
           ].map((stat, i) => (
-            <div key={i} className="glass p-12 squircle border-white/40 dark:border-slate-800/40 hover-lift flex flex-col items-center text-center group shadow-xl">
-              <div className={`w-24 h-24 rounded-[28px] flex items-center justify-center mb-8 group-hover:rotate-6 transition-all shadow-lg ${stat.color}`}>
-                <stat.icon size={44} />
+            <div key={i} className="glass p-8 md:p-10 squircle border-white/40 dark:border-slate-800/40 hover-lift flex flex-col items-center text-center group shadow-xl">
+              <div className={`w-20 h-20 md:w-24 md:h-24 rounded-[28px] flex items-center justify-center mb-6 md:mb-8 group-hover:rotate-6 transition-all shadow-lg ${stat.color}`}>
+                <stat.icon size={36} md:size={44} />
               </div>
-              <p className="text-5xl md:text-7xl font-black mb-2 tracking-tighter text-slate-800 dark:text-white tabular-nums">{stat.value}</p>
-              <p className="text-slate-500 font-black uppercase tracking-[0.15em] text-xs">{stat.label}</p>
+              <p className="text-4xl md:text-6xl font-black mb-2 tracking-tighter text-slate-800 dark:text-white tabular-nums">{stat.value}</p>
+              <p className="text-slate-500 font-black uppercase tracking-[0.15em] text-[10px] md:text-xs">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -142,13 +142,13 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
           {ALL_BADGES.map((badge) => {
             const unlocked = user.id !== 'guest' && user.unlockedBadges.includes(badge.id);
             return (
-              <div key={badge.id} className={`flex-shrink-0 w-64 md:w-72 p-10 squircle border transition-all duration-700 ${unlocked ? 'glass border-emerald-500/40 shadow-2xl scale-105' : 'bg-slate-200/40 dark:bg-slate-900/40 opacity-40 grayscale border-transparent'}`}>
-                <div className={`text-5xl md:text-7xl mb-8 p-8 rounded-[28px] inline-block shadow-inner ${unlocked ? badge.color + ' text-white' : 'bg-slate-300 dark:bg-slate-800'}`}>
+              <div key={badge.id} className={`flex-shrink-0 w-56 md:w-64 p-8 squircle border transition-all duration-700 ${unlocked ? 'glass border-emerald-500/40 shadow-2xl scale-105' : 'bg-slate-200/40 dark:bg-slate-900/40 opacity-40 grayscale border-transparent'}`}>
+                <div className={`text-4xl md:text-6xl mb-6 p-6 rounded-[28px] inline-block shadow-inner ${unlocked ? badge.color + ' text-white' : 'bg-slate-300 dark:bg-slate-800'}`}>
                   {badge.icon}
                 </div>
-                <h4 className="font-black text-2xl md:text-3xl mb-3 leading-tight tracking-tight">{language === 'ar' ? badge.nameAr : badge.nameEn}</h4>
-                <p className="text-xs text-slate-500 font-black uppercase tracking-widest opacity-70">{badge.condition}</p>
-                {unlocked && <div className="mt-4 flex items-center gap-2 text-emerald-500 font-black text-[10px] uppercase tracking-widest"> <Sparkles size={12} /> Unlocked Legacy </div>}
+                <h4 className="font-black text-xl md:text-2xl mb-2 leading-tight tracking-tight">{language === 'ar' ? badge.nameAr : badge.nameEn}</h4>
+                <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-widest opacity-70">{badge.condition}</p>
+                {unlocked && <div className="mt-3 flex items-center gap-2 text-emerald-500 font-black text-[8px] md:text-[10px] uppercase tracking-widest"> <Sparkles size={10} md:size={12} /> Unlocked Legacy </div>}
               </div>
             );
           })}
@@ -170,21 +170,21 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
             { name: user.displayName || "Guest", points: user.socialPoints || 0, avatar: user.avatar || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${user.id || 'Guest'}`, rank: "Rising Star" },
             { name: "Omar Khalid", points: 840, avatar: "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Omar", rank: "Top Donor" }
           ].sort((a,b) => b.points - a.points).map((c, i) => (
-            <div key={i} className={`glass p-8 md:p-10 squircle flex items-center justify-between hover-lift border-white/20 dark:border-slate-800/20 shadow-2xl relative overflow-hidden ${c.name === user.displayName ? 'ring-2 ring-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10' : ''}`}>
-              <div className="flex items-center gap-8 md:gap-12 relative z-10">
-                <span className="text-3xl md:text-5xl font-black text-slate-300/30 w-12">{i + 1}</span>
+            <div key={i} className={`glass p-6 md:p-10 squircle flex items-center justify-between hover-lift border-white/20 dark:border-slate-800/20 shadow-2xl relative overflow-hidden ${c.name === user.displayName ? 'ring-2 ring-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10' : ''}`}>
+              <div className="flex items-center gap-6 md:gap-12 relative z-10">
+                <span className="text-2xl md:text-4xl font-black text-slate-300/30 w-10">{i + 1}</span>
                 <div className="relative">
-                  <img src={c.avatar} className="w-16 h-16 md:w-24 md:h-24 rounded-[30px] object-cover border-4 border-white/50 shadow-2xl" />
-                  {i === 0 && <div className="absolute -top-4 -right-4 bg-amber-400 text-white p-2 rounded-full shadow-lg animate-bounce"><Trophy size={20} /></div>}
+                  <img src={c.avatar} className="w-14 h-14 md:w-20 md:h-20 rounded-[30px] object-cover border-4 border-white/50 shadow-2xl" />
+                  {i === 0 && <div className="absolute -top-3 -right-3 bg-amber-400 text-white p-1.5 rounded-full shadow-lg animate-bounce"><Trophy size={16} md:size={20} /></div>}
                 </div>
                 <div>
-                  <p className="font-black text-xl md:text-3xl tracking-tight">{c.name}</p>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-[0.2em] mt-1">{c.rank}</p>
+                  <p className="font-black text-lg md:text-2xl tracking-tight">{c.name}</p>
+                  <p className="text-[8px] md:text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-[0.2em] mt-1">{c.rank}</p>
                 </div>
               </div>
               <div className="text-right relative z-10">
-                <p className="text-3xl md:text-5xl font-black text-emerald-600 tabular-nums">{c.points}</p>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.socialPoints}</p>
+                <p className="text-2xl md:text-4xl font-black text-emerald-600 tabular-nums">{c.points}</p>
+                <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.socialPoints}</p>
               </div>
             </div>
           ))}
