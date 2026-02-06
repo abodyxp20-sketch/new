@@ -351,7 +351,6 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
         </form>
       </div>
     </div>
-    </div>
   );
 };
 
