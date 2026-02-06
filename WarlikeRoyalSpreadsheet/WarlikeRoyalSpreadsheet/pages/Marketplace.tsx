@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, MapPin, Package, ShoppingBag, Edit3, Star, Heart, Plus, X, QrCode, Sparkles, Zap, Loader2, Trash2 } from 'lucide-react';
+import { Search, Filter, MapPin, Package, ShoppingBag, Edit3, Star, Heart, Plus, X, QrCode, Sparkles, Zap, Loader2, Trash2, MessageCircle, Phone, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { SchoolItem, Category, Language, UserProfile, ItemRequest, ThemeMode } from '../types';
 import { translations } from '../lib/translations';
 import { performSemanticSearch } from '../lib/gemini';
 import { db, deleteDoc, doc } from '../lib/firebase';
+import MessagingSystem from '../components/MessagingSystem';
 
 interface MarketplaceProps {
   items: SchoolItem[];
@@ -25,6 +26,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [requestInput, setRequestInput] = useState({ name: '', category: 'Stationery' as Category });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
   
   const t = translations[language];
   const navigate = useNavigate();
@@ -163,24 +165,36 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                 
                 <div className="p-4 md:p-8 flex-1 flex flex-col">
                   <h3 className="font-black text-lg md:text-2xl tracking-tight mb-1 group-hover:text-emerald-600 transition-colors cursor-pointer" onClick={() => setSelectedItem(item)}>{item.name}</h3>
-                  <p className="text-slate-500 font-medium text-[10px] md:text-base mb-3 line-clamp-2 leading-relaxed">{item.description}</p>
+                  <p className="text-slate-500 font-medium text-[10px] md:text-sm mb-3 line-clamp-2 leading-relaxed">{item.description}</p>
                   
                   <div className="flex items-center gap-1 text-slate-500 font-bold mb-3">
                     <MapPin size={10} className="text-emerald-500" />
-                    <span className="truncate text-[8px] md:text-xs">{item.pickupLocation}</span>
+                    <span className="truncate text-[8px] md:text-[10px]">{item.pickupLocation}</span>
                   </div>
                   
           <div className="mt-auto pt-3 md:pt-4 border-t border-white/40 dark:border-slate-800/40 flex items-center justify-between">
             <div className="flex items-center gap-1.5 md:gap-4">
               <img src={`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${item.donorName}`} className="w-6 h-6 md:w-10 md:h-10 rounded-[8px] md:rounded-[15px] ring-2 md:ring-4 ring-emerald-500/10 shadow-lg" />
-              <span className="text-[8px] md:text-sm text-slate-500 font-black tracking-tight truncate max-w-[40px] md:max-w-none">{item.donorName}</span>
+              <span className="text-[8px] md:text-[10px] text-slate-500 font-black tracking-tight truncate max-w-[40px] md:max-w-none">{item.donorName}</span>
             </div>
-            <button 
-              onClick={() => setSelectedItem(item)}
-              className="bg-emerald-600 text-white p-1.5 md:p-3.5 rounded-[10px] md:rounded-[18px] shadow-2xl tap-active hover-lift"
-            >
-              <ShoppingBag size={14} md:size={24} />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setSelectedItem(item);
+                  setShowMessaging(true);
+                }}
+                className="bg-blue-600 text-white p-1.5 md:p-3.5 rounded-[10px] md:rounded-[18px] shadow-2xl tap-active hover-lift"
+                title={t.contactDonorButton || 'Contact Donor'}
+              >
+                <MessageCircle size={14} md:size={24} />
+              </button>
+              <button
+                onClick={() => setSelectedItem(item)}
+                className="bg-emerald-600 text-white p-1.5 md:p-3.5 rounded-[10px] md:rounded-[18px] shadow-2xl tap-active hover-lift"
+              >
+                <ShoppingBag size={14} md:size={24} />
+              </button>
+            </div>
           </div>
                 </div>
               </div>
@@ -239,9 +253,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                   <div className="inline-flex items-center gap-2 text-emerald-600 font-black text-xs uppercase tracking-[0.2em] mb-6 glass border-emerald-500/20 px-5 py-2 rounded-full">
                     <Package size={18} /> {selectedItem.category}
                   </div>
-                  <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tighter leading-tight">{selectedItem.name}</h2>
+                  <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tighter leading-tight">{selectedItem.name}</h2>
                   <div className="prose dark:prose-invert max-w-none">
-                    <p className="text-slate-500 text-xl leading-relaxed font-medium whitespace-pre-wrap">{selectedItem.description}</p>
+                    <p className="text-slate-500 text-lg leading-relaxed font-medium whitespace-pre-wrap">{selectedItem.description}</p>
                   </div>
                 </div>
 
@@ -269,8 +283,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                 </div>
 
                           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
-                            <div className="flex items-center gap-6">
-                              <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-100">
+                            <div className="flex items-center gap-4">
+                              <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
                                 <QRCodeSVG 
                                   value={JSON.stringify({
                                     id: selectedItem.id,
@@ -281,12 +295,12 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                                   size={256}
                                   level="H"
                                   includeMargin={true}
-                                  className="w-24 h-24 md:w-32 md:h-32"
+                                  className="w-16 h-16 md:w-20 md:h-20"
                                 />
                               </div>
-                              <div className="flex-1 space-y-2">
-                                <h4 className="font-black text-sm tracking-tight text-slate-800 dark:text-white uppercase tracking-widest">Digital Identity</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed tracking-wider">
+                              <div className="flex-1 space-y-1">
+                                <h4 className="font-black text-xs md:text-sm tracking-tight text-slate-800 dark:text-white uppercase tracking-widest">Digital Identity</h4>
+                                <p className="text-[8px] md:text-[10px] text-slate-400 font-bold uppercase leading-relaxed tracking-wider">
                                   Scan to verify asset details and creator info. Verified by Ataa Neural Shield.
                                 </p>
                               </div>
@@ -295,8 +309,17 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
 
                 <div className="flex gap-4">
                   <button 
+                    onClick={() => {
+                      setShowMessaging(true);
+                      setSelectedItem(selectedItem);
+                    }}
+                    className="flex-1 bg-blue-600 text-white py-5 squircle font-black text-lg md:text-xl shadow-2xl shadow-blue-500/30 tap-active hover-lift"
+                  >
+                    {language === 'ar' ? 'تواصل مع المانح' : 'Contact Donor'}
+                  </button>
+                  <button 
                     onClick={() => setSelectedItem(null)}
-                    className="flex-1 bg-emerald-600 text-white py-6 squircle font-black text-2xl shadow-2xl shadow-emerald-500/30 tap-active hover-lift"
+                    className="flex-1 bg-emerald-600 text-white py-5 squircle font-black text-lg md:text-xl shadow-2xl shadow-emerald-500/30 tap-active hover-lift"
                   >
                     {language === 'ar' ? 'طلب استلام فوري' : 'Initiate Secure Transfer'}
                   </button>
@@ -324,6 +347,17 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
             </div>
           </div>
         </div>
+      )}
+
+      {/* Messaging System Modal */}
+      {showMessaging && selectedItem && (
+        <MessagingSystem
+          currentUser={user}
+          item={selectedItem}
+          isOpen={showMessaging}
+          onClose={() => setShowMessaging(false)}
+          language={language}
+        />
       )}
     </div>
   );
