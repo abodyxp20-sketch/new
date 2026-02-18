@@ -33,7 +33,8 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
     pickupLocation: editItem?.pickupLocation || '',
     category: (editItem?.category as Category) || 'Stationery',
     condition: (editItem?.condition as SchoolItem['condition']) || 'Good',
-    qualityScore: 0
+    qualityScore: 0,
+    coordinates: editItem?.coordinates
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +179,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
       <div className="glass squircle-lg p-6 md:p-12 border-white/40 shadow-2xl animate-fade-up">
         <div className="mb-6 md:mb-12">
           <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 tracking-tighter flex items-center gap-3">
-            {editItem ? (language === 'ar' ? 'تعديل عطائك' : 'Refine Your Gift') : t.uploadTitle} <Sparkles className="text-emerald-500 animate-pulse" size={20} md:size={24} />
+            {editItem ? (language === 'ar' ? 'تعديل عطائك' : 'Refine Your Gift') : t.uploadTitle} <Sparkles className="text-emerald-500 animate-pulse" size={20} />
           </h1>
           <p className="text-slate-500 text-sm md:text-lg font-medium">{t.uploadDesc}</p>
         </div>
@@ -194,7 +195,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
             ) : (
               <div className="text-center p-4 md:p-8">
                 <div className="w-14 h-14 md:w-16 md:h-16 bg-emerald-500/10 dark:bg-emerald-500/20 squircle flex items-center justify-center mx-auto mb-3 md:mb-5 shadow-xl text-emerald-600">
-                  <Camera size={32} md:size={40} />
+                  <Camera size={32} />
                 </div>
                 <p className="font-black text-lg md:text-xl tracking-tight text-slate-700 dark:text-slate-200">
                   {language === 'ar' ? 'التقط الصورة الآن' : 'Capture Now'}
@@ -356,6 +357,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
         </form>
       </div>
     </div>
+  </div>
   );
 };
 

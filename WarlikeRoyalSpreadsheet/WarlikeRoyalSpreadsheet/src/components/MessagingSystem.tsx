@@ -9,7 +9,7 @@ import {
   db,
   doc,
   getDoc
-} from '../lib/firebase';
+} from '../../lib/firebase';
 import { UserProfile, SchoolItem, Conversation, Message } from '../types';
 import { translations } from '../lib/translations';
 
