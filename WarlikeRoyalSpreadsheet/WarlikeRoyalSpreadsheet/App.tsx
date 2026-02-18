@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Marketplace from './pages/Marketplace';
@@ -9,13 +9,17 @@ import Settings from './pages/Settings';
 import Admin from './pages/Admin';
 import AIChatbot from './components/AIChatbot';
 import { UserProfile, SchoolItem, Language, ThemeMode, Badge, ItemRequest } from './types';
-import { translations } from './lib/translations';
 import { 
   onAuthStateChanged,
   onSnapshot, 
-  db
+  db,
+  addDoc,
+  collection,
+  doc,
+  updateDoc,
+  deleteDoc
 } from './lib/firebase';
-import { ShieldAlert, Loader2 } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 export const ALL_BADGES: Badge[] = [
   { id: 'first-give', nameEn: 'First Giver', nameAr: 'شرارة العطاء', icon: '🌟', color: 'bg-amber-400', condition: 'Donate 1 item' },
@@ -48,18 +52,17 @@ const AppContent: React.FC = () => {
   const [requests, setRequests] = useState<ItemRequest[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
   const [securityAlert, setSecurityAlert] = useState<string | null>(null);
+  const [themePreference, setThemePreference] = useState<ThemeMode>(() => {
+    return (localStorage.getItem('ataa_theme') as ThemeMode) || 'system';
+  });
   // Persistent language state even for guests
   const [currentLanguage, setCurrentLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('ataa_lang');
     return (saved as Language) || 'ar';
   });
 
-  const location = useLocation();
-  const navigate = useNavigate();
-  
   const language = user?.preferences.language || currentLanguage;
-  const theme = user?.preferences.theme || 'system';
-  const t = translations[language];
+  const theme = user?.preferences.theme || themePreference;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged({}, (u) => {
@@ -92,6 +95,11 @@ const AppContent: React.FC = () => {
     applyTheme(theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (!user || user.id === 'guest') return;
+    localStorage.setItem('ataa_current_user', JSON.stringify(user));
+  }, [user]);
+
   // Handle RTL/LTR and Fonts globally
   useEffect(() => {
     const isRTL = language === 'ar';
@@ -116,6 +124,40 @@ const AppContent: React.FC = () => {
       setUser(updatedUser);
       localStorage.setItem('ataa_current_user', JSON.stringify(updatedUser));
     }
+  };
+
+  const setTheme = (nextTheme: ThemeMode) => {
+    setThemePreference(nextTheme);
+    localStorage.setItem('ataa_theme', nextTheme);
+
+    if (user && user.id !== 'guest') {
+      setUser({
+        ...user,
+        preferences: {
+          ...user.preferences,
+          theme: nextTheme,
+        },
+      });
+    }
+  };
+
+  const handleUpload = (item: SchoolItem) => {
+    setItems((prev) => {
+      const exists = prev.some((entry) => entry.id === item.id);
+      return exists ? prev.map((entry) => (entry.id === item.id ? item : entry)) : [item, ...prev];
+    });
+  };
+
+  const handleApprove = async (itemId: string) => {
+    await updateDoc(doc(db, 'items', itemId), { status: 'approved' });
+  };
+
+  const handleReject = async (itemId: string) => {
+    await deleteDoc(doc(db, 'items', itemId));
+  };
+
+  const handlePostRequest = async (request: ItemRequest) => {
+    await addDoc(collection(db, 'requests'), request);
   };
 
   if (isInitializing) {
@@ -147,11 +189,11 @@ const AppContent: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12 overflow-x-hidden">
         <Routes>
           <Route path="/" element={<Home user={user || { id: 'guest' } as any} language={language} items={items} />} />
-          <Route path="/marketplace" element={<Marketplace items={items.filter(i => i.status === 'approved')} requests={requests} user={user || { id: 'guest' } as any} language={language} theme={theme} onPostRequest={() => {}} />} />
-          <Route path="/upload" element={<Upload user={user} language={language} onUpload={() => {}} />} />
-          <Route path="/upload/:itemId" element={<Upload user={user} language={language} onUpload={() => {}} items={items} />} />
-          <Route path="/settings" element={<Settings user={user} setUser={setUser} theme={theme} setTheme={() => {}} language={language} toggleLanguage={toggleLanguage} />} />
-          <Route path="/admin" element={user && user.role === 'Admin' ? <Admin items={items} onApprove={() => {}} onReject={() => {}} language={language} /> : <Navigate to="/" />} />
+          <Route path="/marketplace" element={<Marketplace items={items.filter(i => i.status === 'approved')} requests={requests} user={user || { id: 'guest' } as any} language={language} theme={theme} onPostRequest={handlePostRequest} />} />
+          <Route path="/upload" element={<Upload user={user} language={language} onUpload={handleUpload} />} />
+          <Route path="/upload/:itemId" element={<Upload user={user} language={language} onUpload={handleUpload} items={items} />} />
+          <Route path="/settings" element={<Settings user={user} setUser={setUser} theme={theme} setTheme={setTheme} language={language} toggleLanguage={toggleLanguage} />} />
+          <Route path="/admin" element={user && user.role === 'Admin' ? <Admin items={items} onApprove={handleApprove} onReject={handleReject} language={language} /> : <Navigate to="/" />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>

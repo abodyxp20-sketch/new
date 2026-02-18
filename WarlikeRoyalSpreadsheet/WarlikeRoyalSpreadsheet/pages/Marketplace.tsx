@@ -6,7 +6,7 @@ import { SchoolItem, Category, Language, UserProfile, ItemRequest, ThemeMode } f
 import { translations } from '../lib/translations';
 import { performSemanticSearch } from '../lib/gemini';
 import { db, deleteDoc, doc } from '../lib/firebase';
-import MessagingSystem from '../components/MessagingSystem';
+import MessagingSystem from '../src/components/MessagingSystem';
 
 interface MarketplaceProps {
   items: SchoolItem[];
@@ -63,6 +63,24 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
     } finally {
       setIsAISearching(false);
     }
+  };
+
+
+  const submitRequest = () => {
+    if (!requestInput.name.trim()) return;
+
+    const newRequest: ItemRequest = {
+      id: crypto.randomUUID(),
+      studentId: user.id || 'guest',
+      studentName: user.displayName || (language === 'ar' ? 'طالب' : 'Student'),
+      itemName: requestInput.name.trim(),
+      category: requestInput.category,
+      createdAt: Date.now(),
+    };
+
+    onPostRequest(newRequest);
+    setRequestInput({ name: '', category: 'Stationery' });
+    setShowRequestModal(false);
   };
 
   const filteredItems = items.filter(item => {
@@ -158,7 +176,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
               />
               <div className={`absolute top-2 md:top-5 ${language === 'ar' ? 'right-2 md:right-5' : 'left-2 md:left-5'} flex gap-3`}>
                 <div className="glass bg-white/70 dark:bg-slate-900/70 border-white px-2 md:px-5 py-1 md:py-2 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-emerald-600 shadow-2xl flex items-center gap-1 md:gap-2">
-                  <Zap size={10} md:size={14} /> <span className="hidden xs:inline">{item.category}</span>
+                  <Zap size={10} /> <span className="hidden xs:inline">{item.category}</span>
                 </div>
               </div>
             </div>
@@ -186,13 +204,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                 className="bg-blue-600 text-white p-1.5 md:p-3.5 rounded-[10px] md:rounded-[18px] shadow-2xl tap-active hover-lift"
                 title={t.contactDonorButton || 'Contact Donor'}
               >
-                <MessageCircle size={14} md:size={24} />
+                <MessageCircle size={14} />
               </button>
               <button
                 onClick={() => setSelectedItem(item)}
                 className="bg-emerald-600 text-white p-1.5 md:p-3.5 rounded-[10px] md:rounded-[18px] shadow-2xl tap-active hover-lift"
               >
-                <ShoppingBag size={14} md:size={24} />
+                <ShoppingBag size={14} />
               </button>
             </div>
           </div>
@@ -344,6 +362,39 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {showRequestModal && (
+        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass max-w-md w-full p-8 rounded-[2rem] border border-white/30 space-y-5">
+            <h3 className="text-2xl font-black tracking-tight">{language === 'ar' ? 'طلب احتياج جديد' : 'Create New Request'}</h3>
+            <input
+              value={requestInput.name}
+              onChange={(e) => setRequestInput((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder={language === 'ar' ? 'ما الذي تحتاجه؟' : 'What do you need?'}
+              className="w-full p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-white/40 outline-none"
+            />
+            <select
+              value={requestInput.category}
+              onChange={(e) => setRequestInput((prev) => ({ ...prev, category: e.target.value as Category }))}
+              className="w-full p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-white/40 outline-none"
+            >
+              {['Stationery', 'Electronics', 'Books', 'Uniforms', 'Art Supplies', 'Other'].map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button onClick={() => setShowRequestModal(false)} className="flex-1 py-3 rounded-2xl bg-slate-200/70 dark:bg-slate-700/70 font-bold">
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button onClick={submitRequest} className="flex-1 py-3 rounded-2xl bg-emerald-600 text-white font-bold">
+                {language === 'ar' ? 'إرسال' : 'Submit'}
+              </button>
             </div>
           </div>
         </div>

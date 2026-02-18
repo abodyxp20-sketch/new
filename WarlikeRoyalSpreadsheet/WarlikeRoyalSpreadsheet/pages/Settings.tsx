@@ -8,7 +8,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, Language, ThemeMode, SchoolItem } from '../types';
 import { translations } from '../lib/translations';
-import { db, uploadImage, doc, updateDoc, auth, signOut, getLocalData, setLocalData } from '../lib/firebase';
+import { db, uploadImage, doc, updateDoc, auth, signOut, getLocalData, setLocalData, signInWithGoogle } from '../lib/firebase';
 
 interface SettingsProps {
   user: UserProfile | null;
@@ -110,6 +110,21 @@ const Settings: React.FC<SettingsProps> = ({ user, setUser, theme, setTheme, lan
     }
   };
 
+
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setAuthError(null);
+    try {
+      await signInWithGoogle(language);
+      window.location.reload();
+    } catch (error: any) {
+      setAuthError(error?.message || (language === 'ar' ? 'تعذر تسجيل الدخول عبر Google.' : 'Unable to sign in with Google.'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const NavItem = ({ id, icon: Icon, label }: any) => (
     <button 
       onClick={() => setActiveTab(id)} 
@@ -163,6 +178,23 @@ const Settings: React.FC<SettingsProps> = ({ user, setUser, theme, setTheme, lan
 
           <div className="glass p-10 md:p-14 squircle-lg shadow-2xl border-white/40 border">
              <form onSubmit={handleAuth} className="space-y-6">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                  className="w-full mb-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-4 rounded-[18px] font-black text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
+                >
+                  {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Mail size={18} />}
+                  {language === 'ar' ? 'تسجيل الدخول بحساب Google' : 'Continue with Google'}
+                </button>
+
+                <div className="relative mb-4">
+                  <div className="border-t border-slate-200 dark:border-slate-700"></div>
+                  <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-white dark:bg-slate-900 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {language === 'ar' ? 'أو' : 'OR'}
+                  </span>
+                </div>
+
                 <div className="flex gap-2 p-1.5 bg-slate-200/50 dark:bg-slate-900/50 rounded-[20px] mb-6">
                   <button type="button" onClick={() => setAuthMode('login')} className={`flex-1 py-4 rounded-[15px] font-black text-base transition-all ${authMode === 'login' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-xl' : 'text-slate-500'}`}>{t.login}</button>
                   <button type="button" onClick={() => setAuthMode('signup')} className={`flex-1 py-4 rounded-[15px] font-black text-base transition-all ${authMode === 'signup' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-xl' : 'text-slate-500'}`}>{t.signup}</button>

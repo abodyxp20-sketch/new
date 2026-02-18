@@ -119,7 +119,7 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
           ].map((stat, i) => (
             <div key={i} className="glass p-8 md:p-10 squircle border-white/40 dark:border-slate-800/40 hover-lift flex flex-col items-center text-center group shadow-xl">
               <div className={`w-20 h-20 md:w-24 md:h-24 rounded-[28px] flex items-center justify-center mb-6 md:mb-8 group-hover:rotate-6 transition-all shadow-lg ${stat.color}`}>
-                <stat.icon size={36} md:size={44} />
+                <stat.icon size={36} />
               </div>
               <p className="text-4xl md:text-6xl font-black mb-2 tracking-tighter text-slate-800 dark:text-white tabular-nums">{stat.value}</p>
               <p className="text-slate-500 font-black uppercase tracking-[0.15em] text-[10px] md:text-xs">{stat.label}</p>
@@ -148,7 +148,7 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
                 </div>
                 <h4 className="font-black text-xl md:text-2xl mb-2 leading-tight tracking-tight">{language === 'ar' ? badge.nameAr : badge.nameEn}</h4>
                 <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-widest opacity-70">{badge.condition}</p>
-                {unlocked && <div className="mt-3 flex items-center gap-2 text-emerald-500 font-black text-[8px] md:text-[10px] uppercase tracking-widest"> <Sparkles size={10} md:size={12} /> Unlocked Legacy </div>}
+                {unlocked && <div className="mt-3 flex items-center gap-2 text-emerald-500 font-black text-[8px] md:text-[10px] uppercase tracking-widest"> <Sparkles size={10} /> Unlocked Legacy </div>}
               </div>
             );
           })}
@@ -175,7 +175,7 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
                 <span className="text-2xl md:text-4xl font-black text-slate-300/30 w-10">{i + 1}</span>
                 <div className="relative">
                   <img src={c.avatar} className="w-14 h-14 md:w-20 md:h-20 rounded-[30px] object-cover border-4 border-white/50 shadow-2xl" />
-                  {i === 0 && <div className="absolute -top-3 -right-3 bg-amber-400 text-white p-1.5 rounded-full shadow-lg animate-bounce"><Trophy size={16} md:size={20} /></div>}
+                  {i === 0 && <div className="absolute -top-3 -right-3 bg-amber-400 text-white p-1.5 rounded-full shadow-lg animate-bounce"><Trophy size={16} /></div>}
                 </div>
                 <div>
                   <p className="font-black text-lg md:text-2xl tracking-tight">{c.name}</p>
