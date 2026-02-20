@@ -6,6 +6,7 @@ import { analyzeItemImage } from '../lib/gemini';
 import { db, uploadImage, collection, addDoc, doc, updateDoc } from '../lib/firebase';
 import { UserProfile, SchoolItem, Category, Language } from '../types';
 import { translations } from '../lib/translations';
+import { isValidPhone, isValidRegion, normalizePhone, sanitizeText } from '../lib/security';
 
 interface UploadProps {
   user: UserProfile | null;
@@ -31,6 +32,8 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
     description: editItem?.description || '',
     notes: editItem?.notes || '',
     pickupLocation: editItem?.pickupLocation || '',
+    region: editItem?.region || '',
+    contactNumber: editItem?.donorPhoneNumber || '',
     category: (editItem?.category as Category) || 'Stationery',
     condition: (editItem?.condition as SchoolItem['condition']) || 'Good',
     qualityScore: 0,
@@ -90,6 +93,18 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!image) return;
+
+    if (!isValidRegion(formData.region || '')) {
+      setError(language === 'ar' ? 'يرجى إدخال منطقة صحيحة.' : 'Please provide a valid region.');
+      return;
+    }
+
+    const cleanedPhone = normalizePhone(formData.contactNumber || '');
+    if (cleanedPhone && !isValidPhone(cleanedPhone)) {
+      setError(language === 'ar' ? 'رقم التواصل غير صالح.' : 'Contact number is not valid.');
+      return;
+    }
+
     setIsUploading(true);
     try {
       let finalImageUrl = image;
@@ -106,11 +121,16 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
 
       const newItemData = {
         ...formData,
+        name: sanitizeText(formData.name, 80),
+        description: sanitizeText(formData.description, 800),
+        notes: sanitizeText(formData.notes || '', 500),
+        pickupLocation: sanitizeText(formData.pickupLocation, 120),
+        region: sanitizeText(formData.region || '', 80),
         imageUrl: finalImageUrl,
         donorId: donorId,
         donorName: donorName,
         donorEmail: donorEmail,
-        donorPhoneNumber: user?.phoneNumber,
+        donorPhoneNumber: cleanedPhone || user?.phoneNumber,
         isAvailable: true,
         status: status,
         createdAt: Date.now()
@@ -132,12 +152,17 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
         const items = JSON.parse(localStorage.getItem('items') || '[]');
         const newItem = {
           ...formData,
+          name: sanitizeText(formData.name, 80),
+          description: sanitizeText(formData.description, 800),
+          notes: sanitizeText(formData.notes || '', 500),
+          pickupLocation: sanitizeText(formData.pickupLocation, 120),
+          region: sanitizeText(formData.region || '', 80),
           id: Math.random().toString(36).substr(2, 9),
           imageUrl: image,
           donorId: user?.id || 'guest',
           donorName: user?.displayName || (language === 'ar' ? 'ضيف عطاء' : 'Ataa Guest'),
           donorEmail: user?.email || `${user?.id || 'guest'}@guest.ataa`,
-          donorPhoneNumber: user?.phoneNumber,
+          donorPhoneNumber: cleanedPhone || user?.phoneNumber,
           isAvailable: true,
           status: 'approved',
           createdAt: Date.now()
@@ -291,6 +316,29 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
                     <MapPin size={24} />
                   </button>
                 </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] px-2">
+                  {language === 'ar' ? 'المنطقة / الحي' : 'Region / Area'}
+                </label>
+                <input
+                  required
+                  value={formData.region}
+                  onChange={e => setFormData({...formData, region: e.target.value})}
+                  placeholder={language === 'ar' ? 'مثال: شمال الرياض' : 'Example: North District'}
+                  className="w-full p-5 rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-bold text-base shadow-inner focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] px-2">
+                  {language === 'ar' ? 'رقم التواصل' : 'Contact Number'}
+                </label>
+                <input
+                  value={formData.contactNumber}
+                  onChange={e => setFormData({...formData, contactNumber: normalizePhone(e.target.value)})}
+                  placeholder={language === 'ar' ? 'اختياري: +9665XXXXXXX' : 'Optional: +1...'}
+                  className="w-full p-5 rounded-[22px] bg-white dark:bg-slate-900/50 border border-white/20 outline-none font-bold text-base shadow-inner focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                />
               </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] px-2">

@@ -18,6 +18,8 @@ export interface SchoolItem {
   name: string;
   description: string;
   notes?: string;
+  region?: string;
+  donorPhoneNumber?: string;
   category: Category;
   condition: 'New' | 'Like New' | 'Good' | 'Fair';
   pickupLocation: string;
@@ -39,6 +41,26 @@ export interface ItemRequest {
   studentName: string;
   itemName: string;
   category: Category;
+  quantity?: number;
+  region?: string;
+  contactNumber?: string;
+  neededBefore?: string;
+  notes?: string;
+  createdAt: number;
+}
+
+export interface BorrowRequest {
+  id: string;
+  itemId: string;
+  itemName: string;
+  ownerId: string;
+  ownerName: string;
+  borrowerId: string;
+  borrowerName: string;
+  borrowerContact: string;
+  region: string;
+  notes?: string;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: number;
 }
 

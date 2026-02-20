@@ -1,3 +1,5 @@
+import { sanitizeText } from './security';
+
 /**
  * Ataa Local Database Engine
  * ---------------------------------
@@ -23,6 +25,17 @@ const broadcast = typeof window !== 'undefined' && 'BroadcastChannel' in window
 
 const withId = <T extends Record<string, any>>(data: T, id = crypto.randomUUID()) => ({ ...data, id });
 const now = () => Date.now();
+
+const sanitizePayload = (payload: any): any => {
+  if (Array.isArray(payload)) return payload.map((entry) => sanitizePayload(entry));
+  if (payload && typeof payload === 'object') {
+    return Object.fromEntries(
+      Object.entries(payload).map(([key, value]) => [key, sanitizePayload(value)]),
+    );
+  }
+  if (typeof payload === 'string') return sanitizeText(payload, 1000);
+  return payload;
+};
 
 const getStorageKey = (collectionName: string) => `${STORAGE_PREFIX}${collectionName}`;
 
@@ -176,8 +189,31 @@ const upsertGoogleUser = (googleProfile: { email: string; name: string; picture?
 
 const decodeGoogleCredential = (token: string) => {
   const payload = token.split('.')[1];
-  const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+  const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const decoded = atob(padded);
   return JSON.parse(decoded);
+};
+
+const loadGoogleIdentityScript = async () => {
+  if ((window as any).google?.accounts?.id) return;
+  await new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector('script[data-google-identity="true"]') as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('failed')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.setAttribute('data-google-identity', 'true');
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('failed'));
+    document.head.appendChild(script);
+  });
 };
 
 export const signInWithGoogle = async (language: 'ar' | 'en' = 'en') => {
@@ -186,60 +222,47 @@ export const signInWithGoogle = async (language: 'ar' | 'en' = 'en') => {
     (import.meta as any)?.env?.VITE_GOOGLE_CLIENT_ID ||
     localStorage.getItem('ataa_google_client_id');
 
-  if ((window as any).google?.accounts?.id && configuredClientId) {
-    const profile = await new Promise<any>((resolve, reject) => {
-      (window as any).google.accounts.id.initialize({
-        client_id: configuredClientId,
-        callback: (response: { credential?: string }) => {
-          if (!response.credential) {
-            reject(new Error(language === 'ar' ? 'تعذر مصادقة Google.' : 'Google authentication failed.'));
-            return;
-          }
-          try {
-            resolve(decodeGoogleCredential(response.credential));
-          } catch {
-            reject(new Error(language === 'ar' ? 'فشل قراءة ملف Google.' : 'Failed to decode Google profile.'));
-          }
-        },
-        ux_mode: 'popup',
-      });
+  if (!configuredClientId) {
+    throw new Error(
+      language === 'ar'
+        ? 'تسجيل Google الحقيقي غير مفعّل بعد. أضف Google Client ID أولاً.'
+        : 'Real Google sign-in is not configured yet. Add a Google Client ID first.',
+    );
+  }
 
-      (window as any).google.accounts.id.prompt((notification: any) => {
-        const dismissed = notification?.isDismissedMoment?.() || notification?.isSkippedMoment?.();
-        if (dismissed) {
-          reject(new Error(language === 'ar' ? 'تم إغلاق نافذة تسجيل Google.' : 'Google sign-in was cancelled.'));
+  await loadGoogleIdentityScript();
+
+  const profile = await new Promise<any>((resolve, reject) => {
+    (window as any).google.accounts.id.initialize({
+      client_id: configuredClientId,
+      callback: (response: { credential?: string }) => {
+        if (!response.credential) {
+          reject(new Error(language === 'ar' ? 'تعذر مصادقة Google.' : 'Google authentication failed.'));
+          return;
         }
-      });
+        try {
+          resolve(decodeGoogleCredential(response.credential));
+        } catch {
+          reject(new Error(language === 'ar' ? 'فشل قراءة ملف Google.' : 'Failed to decode Google profile.'));
+        }
+      },
+      ux_mode: 'popup',
+      auto_select: false,
+      cancel_on_tap_outside: true,
     });
 
-    return upsertGoogleUser({
-      email: profile.email,
-      name: profile.name || profile.email.split('@')[0],
-      picture: profile.picture,
-      language,
+    (window as any).google.accounts.id.prompt((notification: any) => {
+      const dismissed = notification?.isDismissedMoment?.() || notification?.isSkippedMoment?.();
+      if (dismissed) {
+        reject(new Error(language === 'ar' ? 'تم إغلاق نافذة تسجيل Google.' : 'Google sign-in was cancelled.'));
+      }
     });
-  }
+  });
 
-  const fallbackEmail = window.prompt(
-    language === 'ar'
-      ? 'أدخل بريد Google الخاص بك (مثال: student@gmail.com)'
-      : 'Enter your Google email (example: student@gmail.com)',
-  );
-
-  if (!fallbackEmail) {
-    throw new Error(language === 'ar' ? 'تم إلغاء تسجيل الدخول.' : 'Sign-in cancelled.');
-  }
-
-  const normalizedEmail = fallbackEmail.trim().toLowerCase();
-  const isGoogleEmail = /@gmail\.com$|@googlemail\.com$/.test(normalizedEmail);
-  if (!isGoogleEmail) {
-    throw new Error(language === 'ar' ? 'يرجى استخدام بريد Google صالح.' : 'Please use a valid Google email.');
-  }
-
-  const fallbackName = normalizedEmail.split('@')[0].replace(/[._-]/g, ' ');
   return upsertGoogleUser({
-    email: normalizedEmail,
-    name: fallbackName.replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    email: profile.email,
+    name: profile.name || profile.email.split('@')[0],
+    picture: profile.picture,
     language,
   });
 };
@@ -267,9 +290,9 @@ export const setDoc = async (docRef: { collection: string; id: string }, data: a
   const index = collectionData.findIndex((item: any) => item.id === docRef.id);
 
   if (index > -1) {
-    collectionData[index] = { ...collectionData[index], ...data, id: docRef.id };
+    collectionData[index] = { ...collectionData[index], ...sanitizePayload(data), id: docRef.id };
   } else {
-    collectionData.push({ ...data, id: docRef.id });
+    collectionData.push({ ...sanitizePayload(data), id: docRef.id });
   }
 
   setLocalData(docRef.collection, collectionData);
@@ -281,7 +304,7 @@ export const updateDoc = async (docRef: { collection: string; id: string }, data
 
 export const addDoc = async (collectionName: string, data: any) => {
   const collectionData = getLocalData(collectionName);
-  const newItem = withId(data);
+  const newItem = withId(sanitizePayload(data));
   collectionData.push(newItem);
   setLocalData(collectionName, collectionData);
   return { id: newItem.id };

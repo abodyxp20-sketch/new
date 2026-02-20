@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, MapPin, Package, ShoppingBag, Edit3, Star, Heart, Plus, X, QrCode, Sparkles, Zap, Loader2, Trash2, MessageCircle, Phone, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { SchoolItem, Category, Language, UserProfile, ItemRequest, ThemeMode } from '../types';
+import { SchoolItem, Category, Language, UserProfile, ItemRequest, ThemeMode, BorrowRequest } from '../types';
 import { translations } from '../lib/translations';
 import { performSemanticSearch } from '../lib/gemini';
-import { db, deleteDoc, doc } from '../lib/firebase';
+import { db, deleteDoc, doc, addDoc, collection } from '../lib/firebase';
 import MessagingSystem from '../src/components/MessagingSystem';
+import { isValidPhone, isValidRegion, normalizePhone, sanitizeText, safeDate } from '../lib/security';
 
 interface MarketplaceProps {
   items: SchoolItem[];
@@ -24,9 +25,11 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All' | 'My Listings'>('All');
   const [selectedItem, setSelectedItem] = useState<SchoolItem | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [requestInput, setRequestInput] = useState({ name: '', category: 'Stationery' as Category });
+  const [requestInput, setRequestInput] = useState({ name: '', category: 'Stationery' as Category, quantity: 1, region: '', contactNumber: '', neededBefore: '', notes: '' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [showMessaging, setShowMessaging] = useState(false);
+  const [borrowForm, setBorrowForm] = useState({ contact: '', region: '', notes: '' });
+  const [borrowStatus, setBorrowStatus] = useState<string | null>(null);
   
   const t = translations[language];
   const navigate = useNavigate();
@@ -69,18 +72,68 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
   const submitRequest = () => {
     if (!requestInput.name.trim()) return;
 
+    if (!isValidRegion(requestInput.region || '')) {
+      alert(language === 'ar' ? 'يرجى تحديد المنطقة.' : 'Please provide region.');
+      return;
+    }
+
+    const cleanedPhone = normalizePhone(requestInput.contactNumber || '');
+    if (!isValidPhone(cleanedPhone)) {
+      alert(language === 'ar' ? 'رقم التواصل غير صالح.' : 'Contact number is invalid.');
+      return;
+    }
+
     const newRequest: ItemRequest = {
       id: crypto.randomUUID(),
       studentId: user.id || 'guest',
-      studentName: user.displayName || (language === 'ar' ? 'طالب' : 'Student'),
-      itemName: requestInput.name.trim(),
+      studentName: sanitizeText(user.displayName || (language === 'ar' ? 'طالب' : 'Student'), 80),
+      itemName: sanitizeText(requestInput.name.trim(), 120),
       category: requestInput.category,
+      quantity: Math.max(1, Number(requestInput.quantity || 1)),
+      region: sanitizeText(requestInput.region || '', 80),
+      contactNumber: cleanedPhone,
+      neededBefore: safeDate(requestInput.neededBefore),
+      notes: sanitizeText(requestInput.notes || '', 500),
       createdAt: Date.now(),
     };
 
     onPostRequest(newRequest);
-    setRequestInput({ name: '', category: 'Stationery' });
+    setRequestInput({ name: '', category: 'Stationery', quantity: 1, region: '', contactNumber: '', neededBefore: '', notes: '' });
     setShowRequestModal(false);
+  };
+
+
+  const handleBorrowRequest = async () => {
+    if (!selectedItem) return;
+
+    if (!isValidPhone(borrowForm.contact)) {
+      setBorrowStatus(language === 'ar' ? 'يرجى إدخال رقم تواصل صالح.' : 'Please enter a valid contact number.');
+      return;
+    }
+
+    if (!isValidRegion(borrowForm.region)) {
+      setBorrowStatus(language === 'ar' ? 'يرجى إدخال المنطقة.' : 'Please provide your region.');
+      return;
+    }
+
+    const borrowRequest: BorrowRequest = {
+      id: crypto.randomUUID(),
+      itemId: selectedItem.id,
+      itemName: selectedItem.name,
+      ownerId: selectedItem.donorId,
+      ownerName: selectedItem.donorName,
+      borrowerId: user.id || 'guest',
+      borrowerName: user.displayName || (language === 'ar' ? 'طالب' : 'Student'),
+      borrowerContact: normalizePhone(borrowForm.contact),
+      region: sanitizeText(borrowForm.region, 80),
+      notes: sanitizeText(borrowForm.notes || '', 500),
+      status: 'pending',
+      createdAt: Date.now(),
+    };
+
+    await addDoc(collection(db, 'borrow_requests'), borrowRequest);
+    setBorrowStatus(language === 'ar' ? 'تم إرسال طلب الاستعارة بنجاح.' : 'Borrow request sent successfully.');
+    setBorrowForm({ contact: '', region: '', notes: '' });
   };
 
   const filteredItems = items.filter(item => {
@@ -233,9 +286,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                   <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">{req.category}</p>
                 </div>
               </div>
-              <p className="text-base text-slate-500 font-medium mb-6">
+              <p className="text-base text-slate-500 font-medium mb-3">
                 {language === 'ar' ? 'طلب بواسطة ' : 'Need by '} <span className="text-emerald-600 font-black">{req.studentName}</span>
               </p>
+              <p className="text-xs text-slate-500 font-bold mb-2">{language === 'ar' ? 'الكمية:' : 'Quantity:'} {req.quantity || 1}</p>
+              {req.region && <p className="text-xs text-slate-500 font-bold mb-2">{language === 'ar' ? 'المنطقة:' : 'Region:'} {req.region}</p>}
+              {req.contactNumber && <p className="text-xs text-slate-500 font-bold mb-2">{language === 'ar' ? 'التواصل:' : 'Contact:'} {req.contactNumber}</p>}
+              {req.notes && <p className="text-xs text-slate-500 font-medium mb-3 line-clamp-2">{req.notes}</p>}
               <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-white/30 pt-4">
                 Manifested {new Date(req.createdAt).toLocaleDateString()}
               </div>
@@ -325,6 +382,29 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                             </div>
                           </div>
 
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    value={borrowForm.contact}
+                    onChange={(e) => setBorrowForm((prev) => ({ ...prev, contact: normalizePhone(e.target.value) }))}
+                    placeholder={language === 'ar' ? 'رقم تواصل للاستعارة' : 'Borrower contact number'}
+                    className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                  <input
+                    value={borrowForm.region}
+                    onChange={(e) => setBorrowForm((prev) => ({ ...prev, region: e.target.value }))}
+                    placeholder={language === 'ar' ? 'المنطقة' : 'Region'}
+                    className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                  <textarea
+                    value={borrowForm.notes}
+                    onChange={(e) => setBorrowForm((prev) => ({ ...prev, notes: e.target.value }))}
+                    placeholder={language === 'ar' ? 'ملاحظات إضافية' : 'Additional notes'}
+                    className="md:col-span-2 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 min-h-[90px]"
+                  />
+                </div>
+                {borrowStatus && <p className="text-sm font-bold text-emerald-600">{borrowStatus}</p>}
+
                 <div className="flex gap-4">
                   <button 
                     onClick={() => {
@@ -336,10 +416,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                     {language === 'ar' ? 'تواصل مع المانح' : 'Contact Donor'}
                   </button>
                   <button 
-                    onClick={() => setSelectedItem(null)}
+                    onClick={handleBorrowRequest}
                     className="flex-1 bg-emerald-600 text-white py-5 squircle font-black text-lg md:text-xl shadow-2xl shadow-emerald-500/30 tap-active hover-lift"
                   >
-                    {language === 'ar' ? 'طلب استلام فوري' : 'Initiate Secure Transfer'}
+                    {language === 'ar' ? 'إرسال طلب استعارة' : 'Send Borrow Request'}
                   </button>
                   {selectedItem.donorId === user.id && (
                     <div className="flex gap-4">
@@ -388,6 +468,38 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, requests, user, langua
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+            <input
+              type="number"
+              min={1}
+              value={requestInput.quantity}
+              onChange={(e) => setRequestInput((prev) => ({ ...prev, quantity: Number(e.target.value || 1) }))}
+              placeholder={language === 'ar' ? 'الكمية المطلوبة' : 'Required quantity'}
+              className="w-full p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-white/40 outline-none"
+            />
+            <input
+              value={requestInput.region}
+              onChange={(e) => setRequestInput((prev) => ({ ...prev, region: e.target.value }))}
+              placeholder={language === 'ar' ? 'المنطقة' : 'Region'}
+              className="w-full p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-white/40 outline-none"
+            />
+            <input
+              value={requestInput.contactNumber}
+              onChange={(e) => setRequestInput((prev) => ({ ...prev, contactNumber: normalizePhone(e.target.value) }))}
+              placeholder={language === 'ar' ? 'رقم التواصل' : 'Contact number'}
+              className="w-full p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-white/40 outline-none"
+            />
+            <input
+              type="date"
+              value={requestInput.neededBefore}
+              onChange={(e) => setRequestInput((prev) => ({ ...prev, neededBefore: e.target.value }))}
+              className="w-full p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-white/40 outline-none"
+            />
+            <textarea
+              value={requestInput.notes}
+              onChange={(e) => setRequestInput((prev) => ({ ...prev, notes: e.target.value }))}
+              placeholder={language === 'ar' ? 'تفاصيل إضافية للطلب' : 'Extra request details'}
+              className="w-full p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-white/40 outline-none min-h-[90px]"
+            />
             <div className="flex gap-3">
               <button onClick={() => setShowRequestModal(false)} className="flex-1 py-3 rounded-2xl bg-slate-200/70 dark:bg-slate-700/70 font-bold">
                 {language === 'ar' ? 'إلغاء' : 'Cancel'}
