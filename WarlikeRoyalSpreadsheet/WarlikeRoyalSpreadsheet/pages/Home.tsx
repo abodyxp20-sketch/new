@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Gift, Recycle, Users, Sparkles, Award, Leaf, Coins, Cloud, Trophy, GraduationCap, BookOpen, Heart, CheckCircle, Upload as UploadIcon, Zap, Package, ShoppingBag, UserCircle } from 'lucide-react';
 import { UserProfile, Language, SchoolItem } from '../types';
@@ -30,6 +30,17 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
   const treesSaved = Math.max(2, Math.floor(approvedCount * 0.4));
   const co2Reduced = (approvedCount * 0.5 + 5.2).toFixed(1);
   const moneySaved = approvedCount * 25 + 150;
+
+  const featuredItems = useMemo(() => {
+    const approved = items.filter((item) => item.status === 'approved');
+    if (approved.length > 0) return approved.slice(0, 8);
+
+    return [
+      { id: 'fallback-1', name: language === 'ar' ? 'حقيبة مدرسية' : 'School Backpack', description: language === 'ar' ? 'حقيبة عملية بحالة ممتازة.' : 'Practical backpack in excellent shape.', imageUrl: 'https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=800&q=80', donorName: 'Ataa Team', category: 'Stationery' },
+      { id: 'fallback-2', name: language === 'ar' ? 'آلة حاسبة علمية' : 'Scientific Calculator', description: language === 'ar' ? 'مناسبة للمرحلة الثانوية.' : 'Great for middle/high school.', imageUrl: 'https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=800&q=80', donorName: 'Ataa Team', category: 'Electronics' },
+      { id: 'fallback-3', name: language === 'ar' ? 'مجموعة كتب' : 'Book Bundle', description: language === 'ar' ? 'مجموعة كتب للقراءة والدراسة.' : 'Mixed academic reading bundle.', imageUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=800&q=80', donorName: 'Ataa Team', category: 'Books' },
+    ] as any[];
+  }, [items, language]);
 
   return (
     <div className="space-y-16 md:space-y-32 pb-16 overflow-x-hidden">
@@ -128,6 +139,50 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
         </div>
       </section>
 
+
+      {/* Flowing Showcase Strip */}
+      <section className="reveal space-y-8">
+        <div className="flex items-center justify-between px-4 md:px-6">
+          <div>
+            <p className="text-emerald-600 font-black uppercase tracking-[0.2em] text-[10px] md:text-xs">
+              {language === 'ar' ? 'نافذة العرض المباشر' : 'Live Exchange Window'}
+            </p>
+            <h3 className="text-2xl md:text-4xl font-black tracking-tight">
+              {language === 'ar' ? 'عناصر تتدفق في المجتمع' : 'Items Flowing Through the Community'}
+            </h3>
+          </div>
+          <Link to="/marketplace" className="text-emerald-600 font-black text-xs md:text-sm uppercase tracking-widest hover:underline">
+            {language === 'ar' ? 'استكشاف الكل' : 'Browse All'}
+          </Link>
+        </div>
+
+        <div className="relative overflow-hidden">
+          <div className="flow-mask pointer-events-none absolute inset-y-0 left-0 right-0 z-10" />
+          <div className="flow-track">
+            {[...featuredItems, ...featuredItems].map((item, idx) => (
+              <div
+                key={`${item.id}-${idx}`}
+                className="flow-card glass border border-white/40 dark:border-slate-800/40 rounded-[28px] overflow-hidden shadow-2xl"
+              >
+                <div className="h-40 w-full overflow-hidden">
+                  <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 hover:scale-110" />
+                </div>
+                <div className="p-5 space-y-2">
+                  <div className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {item.category}
+                  </div>
+                  <h4 className="font-black text-lg leading-tight line-clamp-1">{item.name}</h4>
+                  <p className="text-xs text-slate-500 font-medium line-clamp-2">{item.description}</p>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                    {language === 'ar' ? 'بواسطة' : 'By'} {item.donorName}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Enhanced Badge Showcase */}
       <section className="reveal space-y-10">
         <div className="flex items-center justify-between px-6">
@@ -193,6 +248,27 @@ const Home: React.FC<HomeProps> = ({ user, language, items }) => {
       
       <style>{`
         .animate-bounce-slow { animation: bounce-slow 6s ease-in-out infinite; }
+        .flow-track {
+          display: flex;
+          gap: 1.25rem;
+          width: max-content;
+          animation: flow-left 34s linear infinite;
+          padding: 0 1rem 0.75rem;
+        }
+        .flow-card {
+          width: min(320px, 82vw);
+          flex-shrink: 0;
+        }
+        .flow-mask {
+          background: linear-gradient(90deg, rgba(248,250,252,1) 0%, rgba(248,250,252,0) 10%, rgba(248,250,252,0) 90%, rgba(248,250,252,1) 100%);
+        }
+        .dark .flow-mask {
+          background: linear-gradient(90deg, rgba(2,6,23,1) 0%, rgba(2,6,23,0) 10%, rgba(2,6,23,0) 90%, rgba(2,6,23,1) 100%);
+        }
+        @keyframes flow-left {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
         @keyframes bounce-slow {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-20px); }
