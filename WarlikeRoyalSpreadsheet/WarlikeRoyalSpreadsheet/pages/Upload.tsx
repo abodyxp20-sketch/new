@@ -60,7 +60,7 @@ const Upload: React.FC<UploadProps> = ({ user, language, onUpload, items }) => {
           }
 
           if (result.isSafe === false) {
-            setError(t.safetyError);
+            setError(result.blockReason || t.safetyError);
             setImage(null);
             return;
           }

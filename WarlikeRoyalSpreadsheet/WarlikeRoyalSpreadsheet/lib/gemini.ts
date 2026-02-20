@@ -8,7 +8,6 @@ const ai = new GoogleGenAI({ apiKey: apiKey || "AI_KEY_NOT_FOUND" });
 // Advanced AI Engine: Multi-layered stability and neural fallback logic
 export const analyzeItemImage = async (base64Image: string) => {
   const maxRetries = 2;
-  let lastError = null;
 
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -17,49 +16,77 @@ export const analyzeItemImage = async (base64Image: string) => {
         contents: {
           parts: [
             { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-            { text: `CRITICAL MISSION: Ataa School Exchange Platform.
-              1. MORAL SAFETY (100% ENFORCED): Strictly block any inappropriate, immodest, or harmful content. Return isSafe: false immediately if found.
-              2. EXTREME FLEXIBILITY (1% LENIENCY): If the image is safe, YOU MUST APPROVE IT. 
-                 Even if the image is 99% blurry, a partial corner of a book, a single pencil pixel, or just a desk - IF IT IS MORALLY SAFE, IT IS AN EDUCATIONAL RESOURCE.
-              3. CREATIVE DATA: Generate a catchy Name, Category, and Description for the item.
-              Return JSON ONLY: {isSafe, name, category, description, condition, qualityScore}.` }
+            {
+              text: `You are a strict school-safety moderation engine for student platform Ataa.
+
+Rules (MUST ENFORCE):
+1) If image includes adult/sexual content, nudity, suggestive content, violence, blood, weapons, drugs, cigarettes/vapes/tobacco/alcohol, hate symbols, abusive/offensive gestures, or dangerous illegal activity => isSafe false.
+2) If image is non-educational but harmless, still allow only if it can reasonably be used in school sharing context.
+3) If uncertain, choose safety-first and return isSafe false.
+4) When blocked, provide blockReason in user-friendly terms.
+5) Output JSON only.`
+            }
           ]
         },
         config: {
-          responseMimeType: "application/json",
+          responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
             properties: {
               isSafe: { type: Type.BOOLEAN },
+              blockReason: { type: Type.STRING },
+              confidence: { type: Type.NUMBER },
               name: { type: Type.STRING },
               category: { type: Type.STRING },
               description: { type: Type.STRING },
               condition: { type: Type.STRING },
               qualityScore: { type: Type.NUMBER }
             },
-            required: ["isSafe", "qualityScore", "name", "description", "category", "condition"]
+            required: ['isSafe', 'confidence', 'name', 'description', 'category', 'condition', 'qualityScore']
           }
         }
       });
 
-      const jsonStr = response.text.trim();
-      return JSON.parse(jsonStr || '{}');
+      const parsed = JSON.parse(response.text.trim() || '{}');
+
+      if (parsed.isSafe === false) {
+        return {
+          isSafe: false,
+          blockReason: parsed.blockReason || 'Inappropriate or unsafe content for students.',
+          confidence: parsed.confidence ?? 0.9,
+          name: '',
+          category: 'Other',
+          description: '',
+          condition: 'Good',
+          qualityScore: 0,
+        };
+      }
+
+      return {
+        isSafe: true,
+        blockReason: '',
+        confidence: parsed.confidence ?? 0.8,
+        name: parsed.name || 'Educational Item',
+        category: parsed.category || 'Other',
+        description: parsed.description || 'School-appropriate item for student exchange.',
+        condition: parsed.condition || 'Good',
+        qualityScore: Number.isFinite(parsed.qualityScore) ? parsed.qualityScore : 70,
+      };
     } catch (error) {
       console.error(`Attempt ${i + 1} failed:`, error);
-      lastError = error;
-      // Exponential backoff or small delay could be added here
     }
   }
-  
-  // Final Neural Fallback (Simulation) if API is completely unreachable
-  console.warn("API Unreachable - Triggering Neural Fallback Engine");
+
+  // Safety-first fallback: do not auto-approve when AI cannot verify.
   return {
-    isSafe: true,
-    name: "Educational Item",
-    category: "Other",
-    description: "Item captured. AI vision detected educational properties.",
-    condition: "Good",
-    qualityScore: 75
+    isSafe: false,
+    blockReason: 'We could not verify this image safely. Please upload a clearer educational item photo.',
+    confidence: 0,
+    name: '',
+    category: 'Other',
+    description: '',
+    condition: 'Good',
+    qualityScore: 0
   };
 };
 
@@ -121,31 +148,55 @@ export const getAdminInsights = async (itemsJson: string) => {
 };
 
 export const askAtaaAssistant = async (prompt: string, language: string, context?: string) => {
-  // Ultra-fast Neural Response Cache
-  const responses: Record<string, Record<string, string>> = {
-    'ar': { 'hello': 'أهلاً بك! كيف يمكنني مساعدتك في العثور على أدوات مدرسية اليوم؟', 'help': 'أنا هنا لمساعدتك في تبادل الكتب والأدوات المدرسية بسرعة وأمان.' },
-    'en': { 'hello': 'Hello! How can I help you find school supplies today?', 'help': 'I am here to help you exchange books and school gear quickly and safely.' }
+  const trimmed = prompt.trim();
+  const lowerPrompt = trimmed.toLowerCase();
+
+  const quickReplies: Record<string, Record<string, string>> = {
+    ar: {
+      hello: 'أهلاً بك 👋 كيف أساعدك في البحث أو النشر في عطاء؟',
+      help: 'أكيد! قل لي ماذا تحتاج: نشر أداة، طلب استعارة، أو التواصل مع المانح.'
+    },
+    en: {
+      hello: 'Hi 👋 How can I help you with posting or finding items on Ataa?',
+      help: 'Sure! Tell me what you need: post an item, request borrowing, or contact a donor.'
+    }
   };
-  
-  const lowerPrompt = prompt.toLowerCase();
-  if (responses[language]?.[lowerPrompt]) return responses[language][lowerPrompt];
+
+  if (quickReplies[language]?.[lowerPrompt]) return quickReplies[language][lowerPrompt];
+
+  const wantsDetailed = /explain|details|step by step|why|كيف|اشرح|تفاصيل|خطوة/.test(trimmed);
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
+      contents: `${trimmed}
+
+Context: ${context || 'Ataa school marketplace app.'}`,
       config: {
-        systemInstruction: `You are Ataa Neural Engine. Respond INSTANTLY and BRIEFLY.
-        Language: ${language === 'ar' ? 'Arabic' : 'English'}.
-        If the user is just saying hello, be warm and helpful.
-        Always guide them toward marketplace success.`
+        systemInstruction: `You are Ataa Assistant for students.
+- Language must be ${language === 'ar' ? 'Arabic' : 'English'} only.
+- Keep answers very simple and clear for students.
+- If user asks normal question: answer in 2-4 short lines.
+- If user asks for explanation or details: give a simple step-by-step answer (max 7 bullets).
+- Be safe and school-appropriate. Refuse harmful/18+ guidance.`
       }
     });
-    return response.text;
+
+    const answer = response.text?.trim() || '';
+    if (!answer) {
+      return language === 'ar'
+        ? 'ممتاز، أقدر أساعدك بخطوات بسيطة. اكتب سؤالك مرة ثانية بشكل مختصر.'
+        : 'I can help with simple steps. Please ask again in one short sentence.';
+    }
+
+    if (!wantsDetailed) {
+      return answer.split('\n').slice(0, 4).join('\n');
+    }
+
+    return answer;
   } catch (error) {
-    // Neural Fallback for Chat
-    return language === 'ar' 
-      ? "أنا هنا معك. محرك الذكاء الاصطناعي يعمل الآن بنظام الاستقرار الاحتياطي. كيف أساعدك؟" 
-      : "I am here. The AI engine is now running on backup stability mode. How can I help?";
+    return language === 'ar'
+      ? 'حالياً المساعد في وضع احتياطي. اكتب سؤالك وسأجيبك بسرعة وبشكل مبسط.'
+      : 'Assistant is in backup mode right now. Ask your question and I will answer simply and quickly.';
   }
 };
