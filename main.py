@@ -1,11 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+import os
 import sqlite3
+import time
 from pathlib import Path
 from urllib.parse import urlparse
-import time
+
+from flask import Flask, flash, redirect, render_template, request, url_for
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "dev-replit-secret-key"
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev-change-this-secret")
+
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_PATH = BASE_DIR / "database.db"
 
@@ -14,6 +17,7 @@ def get_db_connection():
     conn = sqlite3.connect(DATABASE_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 10000")
     return conn
 
 
@@ -22,7 +26,6 @@ def init_db():
         with get_db_connection() as conn:
             conn.execute("PRAGMA journal_mode = WAL")
             conn.execute("PRAGMA synchronous = NORMAL")
-            conn.execute("PRAGMA busy_timeout = 10000")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS student_tools (
@@ -117,6 +120,9 @@ def add_tool():
     return redirect(url_for("index"))
 
 
+# Ensure DB/table exists even when app is launched by production WSGI runners.
+init_db()
+
+
 if __name__ == "__main__":
-    init_db()
     app.run(host="0.0.0.0", port=5000, debug=False)
