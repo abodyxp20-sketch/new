@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>منصة أدوات الطلاب</title>
+  <style>
+    :root {
+      --primary: #0ea5e9;
+      --ok-bg: #ecfdf5;
+      --ok-text: #065f46;
+      --err-bg: #fef2f2;
+      --err-text: #991b1b;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 14px;
+      line-height: 1.6;
+      background: #f9fafb;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      background: white;
+    }
+
+    label { display: block; margin-bottom: 6px; font-weight: 700; }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+    }
+
+    .flash {
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    .flash.success { background: var(--ok-bg); color: var(--ok-text); border: 1px solid #a7f3d0; }
+    .flash.error { background: var(--err-bg); color: var(--err-text); border: 1px solid #fecaca; }
+
+    .card h3 { margin: 0 0 8px; }
+    .card p { margin: 0 0 8px; word-break: break-word; }
+    .muted { color: var(--muted); font-size: 14px; }
+    a { color: #0369a1; }
+
+    @media (min-width: 640px) {
+      body { margin: 30px auto; padding: 0 18px; }
+      button { width: auto; min-width: 180px; }
+      .panel { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>منصة أدوات الطلاب</h1>
+  <p>أضف أداة جديدة وستظهر مباشرة لجميع المستخدمين.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="panel">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form class="panel" action="{{ url_for('add_tool') }}" method="POST">
+    <label for="tool_name">اسم الأداة</label>
+    <input type="text" id="tool_name" name="tool_name" minlength="2" maxlength="120" required />
+
+    <label for="description">الوصف</label>
+    <textarea id="description" name="description" rows="3" minlength="5" maxlength="600" required></textarea>
+
+    <label for="link">الرابط</label>
+    <input type="url" id="link" name="link" placeholder="https://example.com" pattern="https?://.+" required />
+
+    <button type="submit">إضافة الأداة</button>
+  </form>
+
+  <h2>الأدوات المضافة</h2>
+
+  {% if tools %}
+    {% for tool in tools %}
+      <div class="panel card">
+        <h3>{{ tool['tool_name'] }}</h3>
+        <p>{{ tool['description'] }}</p>
+        <p><a href="{{ tool['link'] }}" target="_blank" rel="noopener noreferrer">زيارة الرابط</a></p>
+        <p class="muted">تمت الإضافة: {{ tool['created_at'] }}</p>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel"><p>لا توجد أدوات حالياً.</p></div>
+  {% endif %}
+</body>
+</html>
